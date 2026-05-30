@@ -1,2 +1,22 @@
-// TODO: типы Socket.io событий
-export {}
+import type { GameRoom, Card, CardType, PlayerSetup } from './game'
+
+export interface ClientToServerEvents {
+  createRoom: (nickname: string, cb: (code: string) => void) => void
+  joinRoom: (data: { code: string; nickname: string }, cb: (error?: string) => void) => void
+  kickPlayer: (playerId: string) => void
+  setReady: () => void
+  startGame: () => void
+  submitSetup: (setup: PlayerSetup) => void
+  rollDice: () => void
+  makeDecision: (decision: 'accept' | 'decline') => void
+}
+
+export interface ServerToClientEvents {
+  roomUpdated: (room: GameRoom) => void
+  gameStarted: (room: GameRoom) => void
+  diceRolled: (data: { playerId: string; value: number; cellType: CardType; cashDelta?: number; monthEnd?: boolean }) => void
+  cardDrawn: (card: Card) => void
+  gameFinished: (winnerId: string) => void
+  playerDisconnected: (playerId: string) => void
+  error: (message: string) => void
+}

@@ -1,2 +1,110 @@
-// TODO: данные всех ролей (перки, стартовые параметры)
-export {}
+import type { Role } from '../types/game'
+
+export const ROLES: Role[] = [
+  {
+    id: 'doctor',
+    name: 'Врач',
+    emoji: '🩺',
+    salary: 85_000,
+    startExpenses: 65_000,
+    startCash: 150_000,
+    riskLevel: 'high',
+    passivePerks: [
+      'Серая зарплата без налогов',
+      'Привилегированный вклад под 9%',
+    ],
+    activePerks: [
+      {
+        id: 'private_practice',
+        name: 'Частная практика',
+        description: 'Принять пациентов в частном порядке. Высокий доход — высокий риск проверки.',
+        income: 80_000,
+        riskPercent: 30,
+        penaltyAmount: 50_000,
+        penaltyType: 'fine',
+        cooldownTurns: 3,
+        availableFromTurn: 1,
+      },
+      {
+        id: 'envelope',
+        name: 'Конверт от главврача',
+        description: 'Взять часть зарплаты в конверте, минуя налоги.',
+        income: 40_000,
+        riskPercent: 20,
+        penaltyType: 'arrest',
+        cooldownTurns: 4,
+        availableFromTurn: 2,
+      },
+    ],
+  },
+  {
+    id: 'it',
+    name: 'IT-специалист',
+    emoji: '💻',
+    salary: 180_000,
+    startExpenses: 100_000,
+    startCash: 300_000,
+    riskLevel: 'medium',
+    passivePerks: [
+      'Налоговый вычет на профессиональный инструментарий',
+      'Удалённая работа — меньше расходов на транспорт',
+    ],
+    activePerks: [
+      {
+        id: 'freelance',
+        name: 'Фриланс-контракт',
+        description: 'Взяться за дополнительный проект в свободное время.',
+        income: 120_000,
+        riskPercent: 15,
+        penaltyAmount: 20_000,
+        penaltyType: 'fine',
+        cooldownTurns: 2,
+        availableFromTurn: 1,
+      },
+      {
+        id: 'crypto_trade',
+        name: 'Крипто-трейдинг',
+        description: 'Войти в альткоин на росте. Иксы или ноль.',
+        income: 200_000,
+        riskPercent: 50,
+        penaltyAmount: 100_000,
+        penaltyType: 'fine',
+        cooldownTurns: 3,
+        availableFromTurn: 3,
+      },
+    ],
+  },
+  {
+    id: 'teacher',
+    name: 'Учитель',
+    emoji: '📚',
+    salary: 45_000,
+    startExpenses: 30_000,
+    startCash: 50_000,
+    riskLevel: 'low',
+    passivePerks: [
+      'Льготная ипотека — первоначальный взнос −20%',
+      'Субсидия государства на профессиональное развитие',
+    ],
+    activePerks: [
+      {
+        id: 'tutoring',
+        name: 'Репетиторство',
+        description: 'Взять учеников на частные уроки. Стабильный приработок.',
+        income: 30_000,
+        riskPercent: 5,
+        cooldownTurns: 2,
+        availableFromTurn: 1,
+      },
+      {
+        id: 'grant',
+        name: 'Региональный грант',
+        description: 'Подать заявку на образовательный грант. Шанс невелик, но приз крупный.',
+        income: 150_000,
+        riskPercent: 60,
+        cooldownTurns: 6,
+        availableFromTurn: 4,
+      },
+    ],
+  },
+]
