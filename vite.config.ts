@@ -6,7 +6,7 @@ export default defineConfig({
   server: {
     host: true,        // слушать на 0.0.0.0, а не только localhost
     port: 5173,
-    allowedHosts: 'all',  // разрешить ngrok и любые туннели
+    allowedHosts: true,   // разрешить ngrok и любые туннели
     proxy: {
       '/socket.io': {
         target: 'http://localhost:3001',
