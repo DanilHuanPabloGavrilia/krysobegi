@@ -16,7 +16,7 @@ const httpServer = createServer(app)
 if (process.env.NODE_ENV === 'production') {
   const dist = path.join(__dirname, '../dist')
   app.use(express.static(dist))
-  app.get('*', (_, res) => res.sendFile(path.join(dist, 'index.html')))
+  app.use((_, res) => res.sendFile(path.join(dist, 'index.html')))
 }
 
 const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
