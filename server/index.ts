@@ -110,6 +110,10 @@ io.on('connection', (socket) => {
     const result = ge.rollDice(found.room, socket.id)
     if (isError(result)) { socket.emit('error', result); return }
 
+    // Извлекаем рыночное событие ДО отправки roomUpdated (pendingMarketEvent эфемерен)
+    const marketEvent = found.room.pendingMarketEvent
+    found.room.pendingMarketEvent = null
+
     io.to(found.code).emit('diceRolled', {
       playerId:  socket.id,
       value:     result.dice,
@@ -118,6 +122,12 @@ io.on('connection', (socket) => {
       monthEnd:  result.monthEnd,
     })
     io.to(found.code).emit('roomUpdated', found.room)
+
+    // Рыночное событие рассылаем отдельно — клиенты показывают глобальный оверлей
+    if (marketEvent) {
+      io.to(found.code).emit('marketEventFired', marketEvent)
+      console.log(`[${found.code}] рыночное событие: ${marketEvent.event.title}`)
+    }
   })
 
   socket.on('makeDecision', (decision) => {

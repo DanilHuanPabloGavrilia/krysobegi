@@ -68,6 +68,7 @@ export function createRoom(socketId: string, nickname: string): GameRoom {
     marketPrices: {},
     lastRollNotifications: [],
     pendingTradeOffer: null,
+    pendingMarketEvent: null,
   }
   rooms.set(code, room)
   return room

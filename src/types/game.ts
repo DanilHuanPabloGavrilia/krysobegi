@@ -5,26 +5,20 @@ export type CardType =
   | 'bad_event'
   | 'bonus'
   | 'investment'
-  | 'market'
+  | 'market'           // индивидуальный рыночный эффект для текущего игрока
+  | 'market_news'      // 📰 глобальное рыночное событие — влияет на ВСЕХ
+  | 'doodad'           // 🛒 lifestyle-расходы — держат в крысиных бегах
   | 'vacation'
   | 'tax'
   | 'luck'
   | 'start'
-  | 'raid'          // 🗡️ разбойничья клетка — забрать деньги у лидера
 
 export type GamePhase = 'lobby' | 'setup' | 'playing' | 'finished'
-
 export type TurnPhase = 'rolling' | 'card'
-
-export type Season = 'winter' | 'spring' | 'summer' | 'autumn'
+export type Season    = 'winter' | 'spring' | 'summer' | 'autumn'
 
 export type PlayerGoal =
-  | 'car'
-  | 'travel'
-  | 'renovation'
-  | 'financial_freedom'
-  | 'apartment'
-  | 'business'
+  | 'car' | 'travel' | 'renovation' | 'financial_freedom' | 'apartment' | 'business'
 
 export interface PlayerSetup {
   role: RoleId
@@ -49,12 +43,12 @@ export interface FinanceSheet {
 export interface Loan {
   id: string
   name: string
-  amount: number          // сумма, полученная на руки
-  monthlyPayment: number  // ежемесячный платёж (уже в expenses)
-  turnsLeft: number       // месяцев до погашения
+  amount: number
+  monthlyPayment: number
+  turnsLeft: number
 }
 
-// ── Предложение обмена активом ────────────────────────────────────────────────
+// ── Торговля ──────────────────────────────────────────────────────────────────
 
 export interface TradeOffer {
   id: string
@@ -63,8 +57,35 @@ export interface TradeOffer {
   toPlayerId: string
   assetId: string
   assetName: string
-  price: number        // цена, которую заплатит покупатель
-  expiresAt: number    // timestamp истечения
+  price: number
+  expiresAt: number
+}
+
+// ── Рыночные события (глобальные) ─────────────────────────────────────────────
+
+export interface MarketEffect {
+  stockId: string
+  priceMultiplier: number
+}
+
+export interface MarketEventCard {
+  id: string
+  title: string
+  description: string
+  emoji: string
+  newsFlash: string
+  effects: MarketEffect[]
+}
+
+export interface MarketEventImpact {
+  playerId: string
+  nickname: string
+  incomeDelta: number   // изменение ежемесячного пассивного дохода ₽/мес
+}
+
+export interface MarketEventResult {
+  event: MarketEventCard
+  impacts: MarketEventImpact[]
 }
 
 // ── Актив ─────────────────────────────────────────────────────────────────────
@@ -130,7 +151,7 @@ export interface Player {
   hasMortgage: boolean
   financeSheet: FinanceSheet
   assets: Asset[]
-  loans: Loan[]                // кредиты
+  loans: Loan[]
   position: number
   lapsCompleted: number
   isBot: boolean
@@ -163,7 +184,7 @@ export interface Card {
   triggerIfFlag?: string
   penaltyMultiplierIfFlag?: number
 
-  subtype?: 'stock' | 'crypto' | 'deposit' | 'business'
+  subtype?: 'stock' | 'crypto' | 'deposit' | 'business' | 'real_estate'
   stockId?: string
   costPerShare?: number
   minShares?: number
@@ -196,7 +217,8 @@ export interface GameRoom {
   createdAt: number
   marketPrices: Record<string, number>
   lastRollNotifications: string[]
-  pendingTradeOffer: TradeOffer | null   // активное предложение обмена
+  pendingTradeOffer: TradeOffer | null
+  pendingMarketEvent: MarketEventResult | null   // очищается сервером до roomUpdated
 }
 
 export interface GameState {

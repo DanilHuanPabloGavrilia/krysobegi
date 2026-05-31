@@ -1,4 +1,4 @@
-import type { Card, RoleId } from '../types/game'
+import type { Card, RoleId, MarketEventCard } from '../types/game'
 
 // ── УЧИТЕЛЬ ──────────────────────────────────────────────────────────────────
 
@@ -512,9 +512,66 @@ export const BABY_CARD: Card = {
   requireNoKids: true,
 }
 
+// ── Недвижимость ──────────────────────────────────────────────────────────────
+// Самая важная инвестиция Cashflow — стабильный пассивный доход через аренду
+
+const REAL_ESTATE_CARDS: Card[] = [
+  {
+    id: 'realty_studio',
+    type: 'investment',
+    subtype: 'real_estate',
+    title: 'Студия 20 кв.м.',
+    description: 'Студия в новостройке под ключ. Сдаёте посуточно или в долгую — поток идёт стабильно.',
+    downPayment: 300_000,
+    monthlyIncome: 18_000,
+    monthlyExpense: 0,
+    canSell: true,
+    sellBackPercent: 100,
+  },
+  {
+    id: 'realty_1room',
+    type: 'investment',
+    subtype: 'real_estate',
+    title: 'Однушка в спальном',
+    description: 'Однокомнатная квартира в спальном районе. Арендатор платит исправно — классика инвестора.',
+    downPayment: 600_000,
+    monthlyIncome: 32_000,
+    monthlyExpense: 0,
+    canSell: true,
+    sellBackPercent: 100,
+  },
+  {
+    id: 'realty_2room',
+    type: 'investment',
+    subtype: 'real_estate',
+    title: 'Двушка в центре',
+    description: 'Двухкомнатная в центре — дорогой въезд, зато аренда премиальная и ликвидность высокая.',
+    downPayment: 1_200_000,
+    monthlyIncome: 65_000,
+    monthlyExpense: 0,
+    canSell: true,
+    sellBackPercent: 100,
+  },
+  {
+    id: 'realty_commercial',
+    type: 'investment',
+    subtype: 'real_estate',
+    title: 'Коммерческое помещение',
+    description: 'Небольшое помещение 40 кв.м. под магазин или офис. Арендатор — малый бизнес.',
+    downPayment: 2_000_000,
+    monthlyIncome: 120_000,
+    monthlyExpense: 0,
+    canSell: true,
+    sellBackPercent: 100,
+  },
+]
+
 // ── Инвестиционные карточки (появляются на зелёных клетках с вероятностью ~30%) ──
 
 export const INVESTMENT_CARDS: Card[] = [
+  // ── Недвижимость ──────────────────────────────────────────────────────────
+  ...REAL_ESTATE_CARDS,
+
   // ── Акции ──────────────────────────────────────────────────────────────────
   {
     id: 'stock_sbergrad',
@@ -591,6 +648,9 @@ export const INVESTMENT_CARDS: Card[] = [
     canSell: true,
     sellBackPercent: 100,
   },
+
+  // ── Недвижимость ───────────────────────────────────────────────────────────
+  ...REAL_ESTATE_CARDS,
 
   // ── Малый бизнес ───────────────────────────────────────────────────────────
   {
@@ -692,6 +752,192 @@ export const BASE_STOCK_PRICES: Record<string, number> = {
   crypto_koincoin: 50_000,
   deposit_bank:    50_000,
 }
+
+// ── ГЛОБАЛЬНЫЕ РЫНОЧНЫЕ СОБЫТИЯ ───────────────────────────────────────────────
+// Тянутся при попадании на market_news или автоматически каждые 3 месяца.
+// Влияют на ВСЕ портфели одновременно — создают общую драму как в Cashflow.
+
+export const MARKET_EVENT_CARDS: MarketEventCard[] = [
+  {
+    id: 'oil_crisis',
+    title: '📉 Нефтяной кризис',
+    description: 'ОПЕК снизил квоты, санкции ударили по отрасли. Энергетический сектор в панике.',
+    emoji: '🛢️',
+    newsFlash: 'Акции ГазРесурса рухнули на 40%!',
+    effects: [{ stockId: 'stock_gazresurs', priceMultiplier: 0.60 }],
+  },
+  {
+    id: 'tech_boom',
+    title: '🚀 Технологический бум',
+    description: 'Венчурный капитал хлынул в IT. Оценки стартапов взлетели до небес.',
+    emoji: '💻',
+    newsFlash: 'Акции Янтарь Тех выросли на 70%!',
+    effects: [{ stockId: 'stock_yantar', priceMultiplier: 1.70 }],
+  },
+  {
+    id: 'crypto_rally',
+    title: '₿ Крипто-ралли',
+    description: 'Крупные институциональные фонды начали скупать криптовалюту. Хайп максимальный.',
+    emoji: '🟢',
+    newsFlash: 'КриптоКоин вырос вдвое!',
+    effects: [{ stockId: 'crypto_koincoin', priceMultiplier: 2.00 }],
+  },
+  {
+    id: 'crypto_crash',
+    title: '💥 Крипто-крах',
+    description: 'Регулятор объявил о запрете. Биржи закрываются. Инвесторы в панике.',
+    emoji: '🔴',
+    newsFlash: 'КриптоКоин потерял 70% за сутки!',
+    effects: [{ stockId: 'crypto_koincoin', priceMultiplier: 0.30 }],
+  },
+  {
+    id: 'key_rate_up',
+    title: '🏦 ЦБ резко поднял ставку',
+    description: 'Ключевая ставка выросла до 22% для борьбы с инфляцией. Вклады стали золотом.',
+    emoji: '📊',
+    newsFlash: 'Банковские вклады: доходность выросла на 30%!',
+    effects: [{ stockId: 'deposit_bank', priceMultiplier: 1.30 }],
+  },
+  {
+    id: 'key_rate_down',
+    title: '🏦 ЦБ снизил ставку',
+    description: 'Экономика замедлилась — ставку снизили до 8%. Деньги подешевели.',
+    emoji: '📉',
+    newsFlash: 'Доходность вкладов упала на 35%.',
+    effects: [{ stockId: 'deposit_bank', priceMultiplier: 0.65 }],
+  },
+  {
+    id: 'market_crash',
+    title: '😱 Обвал фондового рынка',
+    description: 'Паника на биржах. Инвесторы сбрасывают всё. Три дня красных свечей.',
+    emoji: '💣',
+    newsFlash: 'Все акции упали на 30%!',
+    effects: [
+      { stockId: 'stock_sbergrad',   priceMultiplier: 0.70 },
+      { stockId: 'stock_gazresurs',  priceMultiplier: 0.70 },
+      { stockId: 'stock_yantar',     priceMultiplier: 0.70 },
+    ],
+  },
+  {
+    id: 'market_boom',
+    title: '🎉 Бычий рынок',
+    description: 'ВВП растёт, рубль укрепляется. Биржа обновляет максимумы каждый день.',
+    emoji: '🐂',
+    newsFlash: 'Все акции выросли на 25%!',
+    effects: [
+      { stockId: 'stock_sbergrad',   priceMultiplier: 1.25 },
+      { stockId: 'stock_gazresurs',  priceMultiplier: 1.25 },
+      { stockId: 'stock_yantar',     priceMultiplier: 1.25 },
+    ],
+  },
+  {
+    id: 'sber_record_dividend',
+    title: '💰 СберГрад — рекордные дивиденды',
+    description: 'Банк объявил о выплате рекордных дивидендов. Акционеры в восторге.',
+    emoji: '🏦',
+    newsFlash: 'Акции СберГрада выросли на 40%!',
+    effects: [{ stockId: 'stock_sbergrad', priceMultiplier: 1.40 }],
+  },
+  {
+    id: 'gas_energy_boom',
+    title: '⚡ Энергетический подъём',
+    description: 'Мировые цены на газ взлетели. Российские экспортёры купаются в прибыли.',
+    emoji: '🔥',
+    newsFlash: 'Акции ГазРесурса выросли на 55%!',
+    effects: [{ stockId: 'stock_gazresurs', priceMultiplier: 1.55 }],
+  },
+  {
+    id: 'yantar_scandal',
+    title: '📰 Скандал в Янтарь Тех',
+    description: 'Утечка данных, обыски в офисе, регулятор открыл дело. Котировки рухнули.',
+    emoji: '😨',
+    newsFlash: 'Акции Янтарь Тех упали на 55%!',
+    effects: [{ stockId: 'stock_yantar', priceMultiplier: 0.45 }],
+  },
+  {
+    id: 'inflation_spike',
+    title: '📈 Инфляция разогналась',
+    description: 'Инфляция 18%. Реальные активы и сырьё дорожают — ценные бумаги в выигрыше.',
+    emoji: '💸',
+    newsFlash: 'Сырьевые акции выросли на 20-30%!',
+    effects: [
+      { stockId: 'stock_gazresurs', priceMultiplier: 1.30 },
+      { stockId: 'stock_sbergrad',  priceMultiplier: 1.20 },
+    ],
+  },
+]
+
+// ── DOODAD-КАРТОЧКИ (lifestyle-расходы) ──────────────────────────────────────
+// Клетки doodad = ты в крысиных бегах. Эти траты реальные, узнаваемые.
+// Они НЕ случайные несчастья (это bad_event). Это выборы, которые КАЖУТСЯ
+// разумными — но именно они держат тебя в ловушке.
+
+export const DOODAD_CARDS: Card[] = [
+  {
+    id: 'doodad_iphone',
+    type: 'doodad',
+    title: 'Новый iPhone',
+    description: 'Вышел новый флагман. Ты же заслужил — работаешь как проклятый. Покупаешь.',
+    penaltyType: 'cash',
+    penaltyAmount: 45_000,
+  },
+  {
+    id: 'doodad_car_loan',
+    type: 'doodad',
+    title: 'Апгрейд автомобиля',
+    description: 'Сосед купил новую машину. Твоя вдруг стала неудобной. Берёшь в кредит.',
+    penaltyType: 'cash',
+    penaltyAmount: 60_000,
+  },
+  {
+    id: 'doodad_renovation',
+    type: 'doodad',
+    title: 'Косметический ремонт',
+    description: 'Видел ролик в TikTok — теперь надо переделать кухню. Смета росла сама.',
+    penaltyType: 'cash',
+    penaltyAmount: 80_000,
+  },
+  {
+    id: 'doodad_vacation',
+    type: 'doodad',
+    title: 'Отпуск «заслужил»',
+    description: 'Две недели в Турции. Всё включено. Чеки в копилку воспоминаний, деньги — на ветер.',
+    penaltyType: 'cash',
+    penaltyAmount: 55_000,
+  },
+  {
+    id: 'doodad_gadgets',
+    type: 'doodad',
+    title: 'Умный дом',
+    description: 'Колонка, умные лампочки, три пульта. Прошивка слетела на следующий день.',
+    penaltyType: 'cash',
+    penaltyAmount: 30_000,
+  },
+  {
+    id: 'doodad_restaurant',
+    type: 'doodad',
+    title: 'Корпоратив и рестораны',
+    description: 'Неделя праздников: дни рождения коллег, корпоратив. Карта пострадала.',
+    penaltyType: 'cash',
+    penaltyAmount: 20_000,
+  },
+  {
+    id: 'doodad_subscription',
+    type: 'doodad',
+    title: 'Подписки «буду пользоваться»',
+    description: 'Спортзал, стриминги, языковое приложение. Пользовался только кофемашиной.',
+    penaltyType: 'cash',
+    penaltyAmount: 12_000,
+  },
+  {
+    id: 'doodad_clothes',
+    type: 'doodad',
+    title: 'Шопинг «просто посмотреть»',
+    description: 'Зашёл за одной вещью. Вышел с тремя пакетами.',
+    penaltyType: 'cash',
+    penaltyAmount: 25_000,
+  },
+]
 
 // ── ПРЕДПРИНИМАТЕЛЬ ───────────────────────────────────────────────────────────
 

@@ -1,7 +1,7 @@
-import type { GameRoom, Player, Card, Asset, Season, Loan, TradeOffer } from '../src/types/game'
-import { getCardsForRole, BABY_CARD, INVESTMENT_CARDS, BASE_STOCK_PRICES } from '../src/data/cards'
+import type { GameRoom, Player, Card, Asset, Season, Loan, TradeOffer, MarketEventResult } from '../src/types/game'
+import { getCardsForRole, BABY_CARD, INVESTMENT_CARDS, BASE_STOCK_PRICES, MARKET_EVENT_CARDS, DOODAD_CARDS } from '../src/data/cards'
 import { ROLES } from '../src/data/roles'
-import { BOARD, KIDS_EXPENSE, WINTER_EXPENSE, SUMMER_KIDS_EXPENSE, LAPS_PER_SEASON, LOAN_TIERS } from '../src/data/constants'
+import { BOARD, KIDS_EXPENSE, WINTER_EXPENSE, SUMMER_KIDS_EXPENSE, LAPS_PER_SEASON, LOAN_TIERS, MARKET_EVENT_INTERVAL } from '../src/data/constants'
 
 // ── волатильность акций ───────────────────────────────────────────────────────
 
@@ -179,7 +179,55 @@ function advanceSeason(room: GameRoom): void {
 }
 
 /**
+ * Глобальное рыночное событие — выбираем случайную карту и применяем к ценам акций.
+ * Рассчитываем изменение пассивного дохода каждого игрока.
+ * Результат сохраняется в room.pendingMarketEvent для последующей отправки клиентам.
+ */
+function drawAndApplyMarketEvent(room: GameRoom): MarketEventResult {
+  const event = MARKET_EVENT_CARDS[Math.floor(Math.random() * MARKET_EVENT_CARDS.length)]
+
+  // Сохраняем пассивный доход ДО изменений
+  const beforeIncome: Record<string, number> = {}
+  for (const p of room.players) beforeIncome[p.id] = p.financeSheet.passiveIncome
+
+  // Применяем эффекты к рыночным ценам
+  for (const fx of event.effects) {
+    const current = room.marketPrices[fx.stockId]
+    if (current !== undefined) {
+      room.marketPrices[fx.stockId] = Math.max(1, Math.round(current * fx.priceMultiplier))
+    }
+  }
+
+  // Пересчитываем дивиденды всем игрокам
+  for (const player of room.players) {
+    let changed = false
+    for (const asset of player.assets) {
+      if (!asset.stockId || !asset.dividendPercent || !asset.shares) continue
+      const currentPrice = room.marketPrices[asset.stockId]
+      if (currentPrice === undefined) continue
+      const newIncome = Math.round((asset.shares * currentPrice * asset.dividendPercent) / 100 / 12)
+      if (asset.monthlyIncome !== newIncome) { asset.monthlyIncome = newIncome; changed = true }
+    }
+    if (changed) calculateCashFlow(player)
+  }
+
+  // Строим список влияния по игрокам
+  const impacts = room.players.map((p) => ({
+    playerId: p.id,
+    nickname: p.nickname,
+    incomeDelta: p.financeSheet.passiveIncome - beforeIncome[p.id],
+  }))
+
+  const result: MarketEventResult = { event, impacts }
+  room.pendingMarketEvent = result
+
+  room.lastRollNotifications.push(`📰 Рынок: ${event.title} — ${event.newsFlash}`)
+  return result
+}
+
+/**
  * Конец месяца: обновить цены, проверить бизнесы, обработать кредиты, начислить cashFlow.
+ * Каждые MARKET_EVENT_INTERVAL месяцев — автоматическое глобальное рыночное событие.
  */
 function applyMonthEnd(room: GameRoom, currentPlayer: Player): number {
   room.monthNumber++
@@ -202,6 +250,11 @@ function applyMonthEnd(room: GameRoom, currentPlayer: Player): number {
 
   if (room.totalLaps > 0 && room.totalLaps % (LAPS_PER_SEASON * room.players.length) === 0) {
     advanceSeason(room)
+  }
+
+  // Автоматическое рыночное событие каждые N месяцев (если ещё не сработало в этот ход)
+  if (room.monthNumber % MARKET_EVENT_INTERVAL === 0 && !room.pendingMarketEvent) {
+    drawAndApplyMarketEvent(room)
   }
 
   return currentPlayer.financeSheet.cashFlow
@@ -241,6 +294,7 @@ export function initializeGame(room: GameRoom): void {
   room.discardPile = []
   room.activeCard = null
   room.pendingTradeOffer = null
+  room.pendingMarketEvent = null
   room.currentPlayerIndex = 0
   room.turnPhase = 'rolling'
   room.turnNumber = 1
@@ -339,28 +393,23 @@ export function rollDice(room: GameRoom, playerId: string): RollResult | string 
       return { dice, cellType, autoAdvance: true, cashDelta, ...(monthEnd && { monthEnd }) }
     }
 
-    case 'raid': {
-      // Забираем 20% наличных у лидера по пассивному доходу (или по наличным, если ничьи)
-      const others = room.players.filter((p) => p.id !== player.id)
-      if (others.length === 0) {
-        const bonus = rand(5_000, 20_000)
-        player.financeSheet.cash += bonus
-        cashDelta += bonus
-      } else {
-        const richest = others.reduce((a, b) =>
-          a.financeSheet.passiveIncome >= b.financeSheet.passiveIncome ? a : b
-        )
-        const steal = Math.max(15_000, Math.floor(richest.financeSheet.cash * 0.20))
-        const actual = Math.min(steal, richest.financeSheet.cash)
-        richest.financeSheet.cash -= actual
-        player.financeSheet.cash += actual
-        cashDelta += actual
-        room.lastRollNotifications.push(
-          `🗡️ ${player.nickname} обчистил ${richest.nickname} на ${actual.toLocaleString('ru-RU')} ₽!`,
-        )
-      }
+    case 'market_news': {
+      // Глобальное рыночное событие — влияет на ВСЕХ игроков
+      drawAndApplyMarketEvent(room)
       advanceTurn(room)
       return { dice, cellType, autoAdvance: true, cashDelta, ...(monthEnd && { monthEnd }) }
+    }
+
+    case 'doodad': {
+      // Lifestyle-расход: тянем случайную doodad-карточку и показываем игроку
+      const card = DOODAD_CARDS[Math.floor(Math.random() * DOODAD_CARDS.length)]
+      room.activeCard = card
+      room.turnPhase  = 'card'
+      return {
+        dice, cellType, autoAdvance: false,
+        ...(cashDelta !== 0 && { cashDelta }),
+        ...(monthEnd && { monthEnd }),
+      }
     }
 
     case 'opportunity':
@@ -407,7 +456,7 @@ export function applyCard(
       return `Недостаточно средств (нужно ${needed.toLocaleString('ru-RU')} ₽)`
     }
     applyEffect(player, card, room)
-  } else if (card.type === 'bad_event') {
+  } else if (card.type === 'bad_event' || card.type === 'doodad') {
     applyEffect(player, card, room)
   }
 
@@ -664,6 +713,21 @@ function applyEffect(player: Player, card: Card, room: GameRoom): void {
         sellBackPercent: card.sellBackPercent ?? 100,
       }
       player.assets.push(asset)
+
+    } else if (card.subtype === 'real_estate') {
+      const asset: Asset = {
+        id:              `${card.id}_${Date.now()}`,
+        name:            card.title,
+        type:            'real_estate',
+        cost:            card.downPayment ?? 0,
+        monthlyIncome:   card.monthlyIncome ?? 0,
+        monthlyExpense:  card.monthlyExpense ?? 0,
+        ownedBy:         player.id,
+        canSell:         true,
+        sellBackPercent: card.sellBackPercent ?? 100,
+      }
+      player.assets.push(asset)
+      player.financeSheet.expenses += asset.monthlyExpense
 
     } else if (card.subtype === 'business') {
       const baseMonthlyIncome = card.monthlyIncome ?? 0

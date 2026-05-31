@@ -54,11 +54,12 @@ export default function EventOverlay({ card, isMyTurn, myPlayer }: Props) {
   const isOpportunity = card.type === 'opportunity'
   const isBadEvent    = card.type === 'bad_event'
   const isInvestment  = card.type === 'investment'
+  const isDoodad      = card.type === 'doodad'
 
   // ── цветовая схема по типу карточки ───────────────────────────────────────
   const accentColor = isOpportunity
     ? 'text-green-400'
-    : isBadEvent
+    : (isBadEvent || isDoodad)
       ? 'text-red-400'
       : isInvestment
         ? 'text-yellow-400'
@@ -66,7 +67,7 @@ export default function EventOverlay({ card, isMyTurn, myPlayer }: Props) {
 
   const borderColor = isOpportunity
     ? 'border-green-700'
-    : isBadEvent
+    : (isBadEvent || isDoodad)
       ? 'border-red-700'
       : isInvestment
         ? 'border-yellow-700'
@@ -74,7 +75,7 @@ export default function EventOverlay({ card, isMyTurn, myPlayer }: Props) {
 
   const bgAccent = isOpportunity
     ? 'bg-green-900/20'
-    : isBadEvent
+    : (isBadEvent || isDoodad)
       ? 'bg-red-900/20'
       : isInvestment
         ? 'bg-yellow-900/15'
@@ -82,11 +83,13 @@ export default function EventOverlay({ card, isMyTurn, myPlayer }: Props) {
 
   const typeLabel = isOpportunity
     ? '💰 Возможность'
-    : isBadEvent
-      ? '⚠️ Неприятность'
-      : isInvestment
-        ? '💼 Инвестиция'
-        : '📋 Карточка'
+    : isDoodad
+      ? '🛒 Lifestyle-трата'
+      : isBadEvent
+        ? '⚠️ Неприятность'
+        : isInvestment
+          ? '💼 Инвестиция'
+          : '📋 Карточка'
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
@@ -247,25 +250,39 @@ export default function EventOverlay({ card, isMyTurn, myPlayer }: Props) {
           </div>
         )}
 
-        {/* ── Финансовые детали: Неприятность ── */}
-        {isBadEvent && card.penaltyAmount !== undefined && (
+        {/* ── Финансовые детали: Неприятность / Doodad ── */}
+        {(isBadEvent || isDoodad) && card.penaltyAmount !== undefined && (
           <div className={`rounded-xl p-4 ${bgAccent} flex justify-between text-sm`}>
-            <span className="text-gray-400">Штраф / списание</span>
+            <span className="text-gray-400">{isDoodad ? 'Потратили' : 'Штраф / списание'}</span>
             <span className="font-bold text-red-400">−{fmt(card.penaltyAmount)}</span>
           </div>
         )}
 
-        {isBadEvent && card.penaltyType === 'skip_turns' && (
+        {(isBadEvent || isDoodad) && card.penaltyType === 'skip_turns' && (
           <div className={`rounded-xl p-4 ${bgAccent} flex justify-between text-sm`}>
             <span className="text-gray-400">Пропускаешь ходов</span>
             <span className="font-bold text-red-400">{card.skipTurns ?? 1}</span>
           </div>
         )}
 
+        {/* ── Doodad: нет выбора — просто потратил ── */}
+        {isDoodad && (
+          <p className="text-xs text-gray-600 text-center italic">
+            Это была &quot;умная&quot; трата. Так держат людей в крысиных бегах.
+          </p>
+        )}
+
         {/* ── Кнопки ── */}
         {isMyTurn ? (
           <div className="flex gap-3 pt-2">
-            {(isOpportunity || isInvestment) ? (
+            {isDoodad ? (
+              <button
+                onClick={() => makeDecision('decline')}
+                className="flex-1 py-3 bg-gray-700 hover:bg-gray-600 rounded-xl font-semibold transition-colors"
+              >
+                Деньги потрачены
+              </button>
+            ) : (isOpportunity || isInvestment) ? (
               <>
                 <button
                   onClick={() => makeDecision('accept')}

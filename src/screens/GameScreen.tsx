@@ -4,7 +4,7 @@ import { useSocketStore } from '../store/socketStore'
 import EventOverlay from '../components/EventOverlay'
 import GameBoard, { BOARD_PX } from '../components/GameBoard'
 import { sounds } from '../utils/sounds'
-import type { Player, Asset, TradeOffer } from '../types/game'
+import type { Player, Asset, TradeOffer, MarketEventResult } from '../types/game'
 
 // ── утилиты ───────────────────────────────────────────────────────────────────
 
@@ -27,15 +27,16 @@ function roleEmoji(roleId: string | null): string {
 }
 
 const CELL_LABELS: Record<string, string> = {
-  bonus:       '🎁 Премия',
-  start:       '🏁 Старт — конец месяца',
-  vacation:    '🏖 Отпуск — пропуск хода',
-  tax:         '🏛 Налоговая',
-  luck:        '🍀 Удача',
-  market:      '📈 Рынок',
-  opportunity: '⭐ Возможность',
-  bad_event:   '⚡ Неприятность',
-  raid:        '🗡️ Рейд',
+  bonus:        '🎁 Премия',
+  start:        '🏁 Старт — конец месяца',
+  vacation:     '🏖 Отпуск — пропуск хода',
+  tax:          '🏛 Налоговая',
+  luck:         '🍀 Удача',
+  market:       '📈 Рынок',
+  market_news:  '📰 Рыночная новость',
+  doodad:       '🛒 Lifestyle-трата',
+  opportunity:  '⭐ Возможность',
+  bad_event:    '⚡ Неприятность',
 }
 
 // ── типы анимаций ─────────────────────────────────────────────────────────────
@@ -524,6 +525,84 @@ function TradeOfferOverlay({
   )
 }
 
+// ── Глобальный рыночный оверлей ────────────────────────────────────────────────
+// Видят ВСЕ игроки одновременно — как в настоящем Cashflow
+
+function MarketEventOverlay({
+  result,
+  onDismiss,
+}: {
+  result: MarketEventResult
+  onDismiss: () => void
+}) {
+  const { event, impacts } = result
+  const affected = impacts.filter((i) => i.incomeDelta !== 0)
+
+  // Авто-закрытие через 8 секунд
+  useEffect(() => {
+    const t = setTimeout(onDismiss, 8000)
+    return () => clearTimeout(t)
+  }, [event.id])
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      onClick={onDismiss}
+    >
+      <div
+        className="bg-gray-900 border-2 border-sky-500 rounded-2xl p-8 w-full max-w-lg mx-4 flex flex-col gap-4"
+        onClick={(e) => e.stopPropagation()}
+        style={{ boxShadow: '0 0 40px rgba(56, 189, 248, 0.3)' }}
+      >
+        {/* Шапка */}
+        <div className="text-center">
+          <div className="text-5xl mb-2">{event.emoji}</div>
+          <p className="text-xs font-semibold uppercase tracking-widest text-sky-400 mb-1">
+            📰 Рыночная новость
+          </p>
+          <h2 className="text-2xl font-bold text-white">{event.title}</h2>
+          <p className="text-gray-400 text-sm mt-1">{event.description}</p>
+        </div>
+
+        {/* Новостной флеш */}
+        <div className="bg-sky-950/60 border border-sky-700/50 rounded-xl px-4 py-3 text-center">
+          <p className="text-sky-200 font-semibold text-sm">{event.newsFlash}</p>
+        </div>
+
+        {/* Влияние на игроков */}
+        <div className="flex flex-col gap-2">
+          <p className="text-[10px] uppercase tracking-widest text-gray-600">Влияние на портфели</p>
+          {affected.length === 0 ? (
+            <p className="text-gray-500 text-sm text-center">Ни у кого нет затронутых активов</p>
+          ) : (
+            affected.map((imp) => (
+              <div key={imp.playerId} className="flex justify-between items-center bg-gray-800 rounded-lg px-3 py-2 text-sm">
+                <span className="text-gray-300">{imp.nickname}</span>
+                <span className={`font-bold ${imp.incomeDelta > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {imp.incomeDelta > 0 ? '+' : ''}{imp.incomeDelta.toLocaleString('ru-RU')} ₽/мес
+                </span>
+              </div>
+            ))
+          )}
+          {impacts.filter((i) => i.incomeDelta === 0).map((imp) => (
+            <div key={imp.playerId} className="flex justify-between items-center opacity-40 px-3 py-1 text-xs">
+              <span className="text-gray-400">{imp.nickname}</span>
+              <span className="text-gray-500">нет активов</span>
+            </div>
+          ))}
+        </div>
+
+        <button
+          onClick={onDismiss}
+          className="mt-2 w-full py-2.5 bg-sky-700 hover:bg-sky-600 rounded-xl font-semibold transition-colors text-sm"
+        >
+          Понятно
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ── Экран победителя ──────────────────────────────────────────────────────────
 
 function WinnerScreen({
@@ -663,7 +742,7 @@ export default function GameScreen() {
   const navigate = useNavigate()
   const {
     room, myPlayerId, diceResult, rollDice, leaveRoom, winnerId,
-    reactions, chatMessages,
+    reactions, chatMessages, lastMarketEvent,
     sellAsset, takeLoan, repayLoan, sendReaction, sendChat,
     proposeTradeOffer, respondToTrade,
   } = useSocketStore()
@@ -731,6 +810,7 @@ export default function GameScreen() {
   useEffect(() => { if (diceResult) sounds.dice() }, [diceResult?.value])
   useEffect(() => { if (room?.activeCard) sounds.card() }, [room?.activeCard?.id])
   useEffect(() => { if (winnerId) sounds.win() }, [winnerId])
+  useEffect(() => { if (lastMarketEvent) sounds.moneyUp() }, [lastMarketEvent?.event.id])
 
   // ── состояние UI ──────────────────────────────────────────────────────────
   const [showChat, setShowChat]       = useState(false)
@@ -1065,6 +1145,14 @@ export default function GameScreen() {
           isTarget={isTradeTarget}
           myCash={myPlayer?.financeSheet.cash ?? 0}
           onRespond={handleRespondToTrade}
+        />
+      )}
+
+      {/* ── Глобальный рыночный оверлей — видят ВСЕ ─────────────────────────── */}
+      {lastMarketEvent && !room.activeCard && (
+        <MarketEventOverlay
+          result={lastMarketEvent}
+          onDismiss={() => useSocketStore.setState({ lastMarketEvent: null })}
         />
       )}
 

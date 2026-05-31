@@ -51,4 +51,7 @@ export interface ServerToClientEvents {
     message: string
     timestamp: number
   }) => void
+
+  // Глобальное рыночное событие (эфемерное — видят все игроки)
+  marketEventFired: (result: import('./game').MarketEventResult) => void
 }

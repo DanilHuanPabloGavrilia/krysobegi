@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { io, Socket } from 'socket.io-client'
 import type { ClientToServerEvents, ServerToClientEvents } from '../types/socket'
-import type { GameRoom, CardType, PlayerSetup } from '../types/game'
+import type { GameRoom, CardType, PlayerSetup, MarketEventResult } from '../types/game'
 
 type AppSocket = Socket<ServerToClientEvents, ClientToServerEvents>
 
@@ -41,6 +41,7 @@ interface SocketStore {
   // Эфемерные события (не в GameRoom)
   reactions: ReactionEvent[]
   chatMessages: ChatMessage[]
+  lastMarketEvent: MarketEventResult | null
 
   connect: () => void
   createRoom: (nickname: string) => void
@@ -76,6 +77,7 @@ export const useSocketStore = create<SocketStore>((set, get) => ({
   diceResult: null,
   reactions: [],
   chatMessages: [],
+  lastMarketEvent: null,
 
   connect: () => {
     if (get().socket) return
@@ -129,8 +131,15 @@ export const useSocketStore = create<SocketStore>((set, get) => ({
         timestamp: data.timestamp,
       }
       set((s) => ({
-        chatMessages: [...s.chatMessages.slice(-49), msg],   // хранить последние 50
+        chatMessages: [...s.chatMessages.slice(-49), msg],
       }))
+    })
+
+    // ── Рыночные события ──────────────────────────────────────────────────
+    socket.on('marketEventFired', (result) => {
+      set({ lastMarketEvent: result })
+      // Автоматически убираем оверлей через 8 секунд
+      setTimeout(() => set({ lastMarketEvent: null }), 8000)
     })
 
     set({ socket })
@@ -163,7 +172,7 @@ export const useSocketStore = create<SocketStore>((set, get) => ({
     set({
       socket: null, room: null, myPlayerId: null,
       gameStarted: false, winnerId: null, diceResult: null,
-      error: null, reactions: [], chatMessages: [],
+      error: null, reactions: [], chatMessages: [], lastMarketEvent: null,
     })
   },
 

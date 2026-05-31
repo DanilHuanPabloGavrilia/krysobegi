@@ -20,39 +20,42 @@ const PLAYER_COLORS = [
 // ── type → visual maps ─────────────────────────────────────────────────────────
 
 const TYPE_BG: Record<string, string> = {
-  bonus:       '#78350f',
-  opportunity: '#14532d',
-  bad_event:   '#450a0a',
-  market:      '#1f2937',
-  start:       '#713f12',
-  vacation:    '#713f12',
-  tax:         '#1a1a2e',
-  luck:        '#1c1a3e',
-  raid:        '#1a0d2e',  // тёмно-фиолетовый
+  bonus:        '#78350f',
+  opportunity:  '#14532d',
+  bad_event:    '#450a0a',
+  market:       '#1f2937',
+  market_news:  '#0c2a3a',  // тёмно-синий: РЫНОЧНАЯ НОВОСТЬ
+  doodad:       '#2d1a00',  // тёмно-янтарный: lifestyle-трата
+  start:        '#713f12',
+  vacation:     '#713f12',
+  tax:          '#1a1a2e',
+  luck:         '#1c1a3e',
 }
 
 const TYPE_BORDER: Record<string, string> = {
-  bonus:       '#eab308',
-  opportunity: '#22c55e',
-  bad_event:   '#ef4444',
-  market:      '#6b7280',
-  start:       '#f59e0b',
-  vacation:    '#f59e0b',
-  tax:         '#7c3aed',
-  luck:        '#10b981',
-  raid:        '#a855f7',  // фиолетовый
+  bonus:        '#eab308',
+  opportunity:  '#22c55e',
+  bad_event:    '#ef4444',
+  market:       '#6b7280',
+  market_news:  '#38bdf8',  // голубой: РЫНОЧНАЯ НОВОСТЬ
+  doodad:       '#f59e0b',  // янтарный: lifestyle
+  start:        '#f59e0b',
+  vacation:     '#f59e0b',
+  tax:          '#7c3aed',
+  luck:         '#10b981',
 }
 
 const TYPE_ICON: Record<string, string> = {
-  bonus:       '🎁',
-  opportunity: '⭐',
-  bad_event:   '⚡',
-  market:      '📈',
-  start:       '🏁',
-  vacation:    '🏖',
-  tax:         '🏛',
-  luck:        '🍀',
-  raid:        '🗡️',
+  bonus:        '🎁',
+  opportunity:  '⭐',
+  bad_event:    '⚡',
+  market:       '📈',
+  market_news:  '📰',
+  doodad:       '🛒',
+  start:        '🏁',
+  vacation:     '🏖',
+  tax:          '🏛',
+  luck:         '🍀',
 }
 
 const SEASON_LABEL: Record<Season, string> = {
@@ -378,11 +381,12 @@ export default function GameBoard({
             justifyContent: 'center',
           }}>
             {[
-              { icon: '🎁', label: 'премия',     color: '#eab308' },
-              { icon: '⭐', label: 'шанс',        color: '#22c55e' },
-              { icon: '⚡', label: 'неудача',     color: '#ef4444' },
-              { icon: '📈', label: 'рынок',       color: '#6b7280' },
-              { icon: '🗡️', label: 'рейд',        color: '#a855f7' },
+              { icon: '🎁', label: 'премия',   color: '#eab308' },
+              { icon: '⭐', label: 'шанс',      color: '#22c55e' },
+              { icon: '⚡', label: 'неудача',   color: '#ef4444' },
+              { icon: '📈', label: 'рынок',     color: '#6b7280' },
+              { icon: '📰', label: 'новость',   color: '#38bdf8' },
+              { icon: '🛒', label: 'lifestyle', color: '#f59e0b' },
             ].map(({ icon, label, color }) => (
               <span key={label} style={{ fontSize: 9, color, display: 'flex', alignItems: 'center', gap: 3 }}>
                 {icon} {label}
