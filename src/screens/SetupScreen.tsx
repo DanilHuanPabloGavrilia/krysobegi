@@ -102,7 +102,7 @@ export default function SetupScreen() {
         {/* ── Выбор роли ─────────────────────────────────────────────────── */}
         <section>
           <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-4">Профессия</h2>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
             {ROLES.map((r) => (
               <button
                 key={r.id}

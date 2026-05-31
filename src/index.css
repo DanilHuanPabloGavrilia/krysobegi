@@ -1,3 +1,27 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@keyframes floatUp {
+  0%   { opacity: 1; transform: translateY(0) translateX(-50%); }
+  70%  { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-70px) translateX(-50%); }
+}
+
+@keyframes reactionPop {
+  0%   { opacity: 0; transform: scale(0.3); }
+  20%  { opacity: 1; transform: scale(1.2); }
+  40%  { transform: scale(1); }
+  80%  { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-40px) scale(0.8); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pulseBorder {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.4); }
+  50%       { box-shadow: 0 0 0 8px rgba(168, 85, 247, 0); }
+}

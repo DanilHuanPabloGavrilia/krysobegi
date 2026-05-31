@@ -20,7 +20,7 @@ const PLAYER_COLORS = [
 // ── type → visual maps ─────────────────────────────────────────────────────────
 
 const TYPE_BG: Record<string, string> = {
-  bonus:       '#78350f',  // amber-900
+  bonus:       '#78350f',
   opportunity: '#14532d',
   bad_event:   '#450a0a',
   market:      '#1f2937',
@@ -28,10 +28,11 @@ const TYPE_BG: Record<string, string> = {
   vacation:    '#713f12',
   tax:         '#1a1a2e',
   luck:        '#1c1a3e',
+  raid:        '#1a0d2e',  // тёмно-фиолетовый
 }
 
 const TYPE_BORDER: Record<string, string> = {
-  bonus:       '#eab308',  // yellow-500
+  bonus:       '#eab308',
   opportunity: '#22c55e',
   bad_event:   '#ef4444',
   market:      '#6b7280',
@@ -39,6 +40,7 @@ const TYPE_BORDER: Record<string, string> = {
   vacation:    '#f59e0b',
   tax:         '#7c3aed',
   luck:        '#10b981',
+  raid:        '#a855f7',  // фиолетовый
 }
 
 const TYPE_ICON: Record<string, string> = {
@@ -50,6 +52,7 @@ const TYPE_ICON: Record<string, string> = {
   vacation:    '🏖',
   tax:         '🏛',
   luck:        '🍀',
+  raid:        '🗡️',
 }
 
 const SEASON_LABEL: Record<Season, string> = {
@@ -379,6 +382,7 @@ export default function GameBoard({
               { icon: '⭐', label: 'шанс',        color: '#22c55e' },
               { icon: '⚡', label: 'неудача',     color: '#ef4444' },
               { icon: '📈', label: 'рынок',       color: '#6b7280' },
+              { icon: '🗡️', label: 'рейд',        color: '#a855f7' },
             ].map(({ icon, label, color }) => (
               <span key={label} style={{ fontSize: 9, color, display: 'flex', alignItems: 'center', gap: 3 }}>
                 {icon} {label}

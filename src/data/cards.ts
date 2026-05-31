@@ -693,19 +693,192 @@ export const BASE_STOCK_PRICES: Record<string, number> = {
   deposit_bank:    50_000,
 }
 
+// ── ПРЕДПРИНИМАТЕЛЬ ───────────────────────────────────────────────────────────
+
+const entrepreneurOpportunities: Card[] = [
+  {
+    id: 'entr_angel',
+    roleId: 'entrepreneur',
+    type: 'opportunity',
+    title: 'Раунд А от инвестора',
+    description: 'Бизнес-ангел вложился в ваш стартап. Крупная разовая инъекция капитала.',
+    cashBonus: 250_000,
+  },
+  {
+    id: 'entr_saas',
+    roleId: 'entrepreneur',
+    type: 'opportunity',
+    title: 'SaaS взлетел',
+    description: 'Подписная база выросла — автоматический доход каждый месяц.',
+    downPayment: 80_000,
+    monthlyIncome: 50_000,
+    assetType: 'business',
+  },
+  {
+    id: 'entr_partnership',
+    roleId: 'entrepreneur',
+    type: 'opportunity',
+    title: 'Партнёрский договор',
+    description: 'Крупный игрок рынка подписал соглашение. Роялти каждый месяц.',
+    downPayment: 0,
+    monthlyIncome: 35_000,
+    assetType: 'business',
+  },
+  {
+    id: 'entr_sell_stake',
+    roleId: 'entrepreneur',
+    type: 'opportunity',
+    title: 'Продажа доли',
+    description: 'Продали 10% компании стратегическому инвестору. Деньги на счёт.',
+    cashBonus: 180_000,
+  },
+  {
+    id: 'entr_grant',
+    roleId: 'entrepreneur',
+    type: 'opportunity',
+    title: 'Госгрант «Старт»',
+    description: 'Выиграли государственный грант на развитие инновационного бизнеса.',
+    cashBonus: 300_000,
+  },
+  {
+    id: 'entr_marketplace',
+    roleId: 'entrepreneur',
+    type: 'opportunity',
+    title: 'Запуск маркетплейса',
+    description: 'Открыли собственный маркетплейс. Комиссия с продавцов — пассивный поток.',
+    downPayment: 150_000,
+    monthlyIncome: 65_000,
+    assetType: 'business',
+  },
+  {
+    id: 'entr_outsource',
+    roleId: 'entrepreneur',
+    type: 'opportunity',
+    title: 'Дешёвая аутсорс-команда',
+    description: 'Нашли исполнителей в регионе. Расходы упали — чистая прибыль выросла.',
+    downPayment: 30_000,
+    monthlyIncome: 25_000,
+    assetType: 'business',
+  },
+  {
+    id: 'entr_tender',
+    roleId: 'entrepreneur',
+    type: 'opportunity',
+    title: 'Победа в тендере',
+    description: 'Выиграли госконтракт. Большая разовая выплата по завершении работ.',
+    cashBonus: 120_000,
+  },
+  {
+    id: 'entr_franchise_sell',
+    roleId: 'entrepreneur',
+    type: 'opportunity',
+    title: 'Продажа франшизы',
+    description: 'Запустили франчайзинг своего бренда. Паушальный взнос сразу, роялти потом.',
+    cashBonus: 200_000,
+    monthlyIncome: 20_000,
+    downPayment: 0,
+    assetType: 'business',
+  },
+  {
+    id: 'entr_viral',
+    roleId: 'entrepreneur',
+    type: 'opportunity',
+    title: 'Вирусный контент',
+    description: 'Маркетинговый ролик набрал 10 миллионов просмотров. Клиенты пошли сами.',
+    cashBonus: 90_000,
+  },
+]
+
+const entrepreneurBadEvents: Card[] = [
+  {
+    id: 'entr_copy',
+    roleId: 'entrepreneur',
+    type: 'bad_event',
+    title: 'Конкурент скопировал идею',
+    description: 'Крупная компания скопировала ваш продукт. Юристы, патенты, нервы.',
+    penaltyType: 'cash',
+    penaltyAmount: 90_000,
+  },
+  {
+    id: 'entr_cashgap',
+    roleId: 'entrepreneur',
+    type: 'bad_event',
+    title: 'Кассовый разрыв',
+    description: 'Деньги от клиентов ещё не пришли, а платить нужно уже сейчас.',
+    penaltyType: 'skip_turns',
+    skipTurns: 1,
+  },
+  {
+    id: 'entr_fns',
+    roleId: 'entrepreneur',
+    type: 'bad_event',
+    title: 'Налоговая проверка',
+    description: 'ФНС нашла нарушения в отчётности. Штраф и доначисление.',
+    penaltyType: 'cash',
+    penaltyAmount: 130_000,
+  },
+  {
+    id: 'entr_lawsuit',
+    roleId: 'entrepreneur',
+    type: 'bad_event',
+    title: 'Иск от сотрудника',
+    description: 'Бывший сотрудник подал в суд за нарушение трудового договора.',
+    penaltyType: 'cash',
+    penaltyAmount: 80_000,
+  },
+  {
+    id: 'entr_supplier',
+    roleId: 'entrepreneur',
+    type: 'bad_event',
+    title: 'Поставщик сорвал сроки',
+    description: 'Ключевой поставщик пропал. Срывы сроков, штрафы клиентам.',
+    penaltyType: 'cash',
+    penaltyAmount: 60_000,
+  },
+  {
+    id: 'entr_investor_out',
+    roleId: 'entrepreneur',
+    type: 'bad_event',
+    title: 'Инвестор вышел досрочно',
+    description: 'Инвестор активировал опцион и забрал деньги раньше срока.',
+    penaltyType: 'cash',
+    penaltyAmount: 200_000,
+  },
+  {
+    id: 'entr_ddos',
+    roleId: 'entrepreneur',
+    type: 'bad_event',
+    title: 'DDoS-атака',
+    description: 'Сервис лежал двое суток. Клиенты ушли, репутация пострадала.',
+    penaltyType: 'cash',
+    penaltyAmount: 45_000,
+  },
+  {
+    id: 'entr_ip_theft',
+    roleId: 'entrepreneur',
+    type: 'bad_event',
+    title: 'Кража базы данных',
+    description: 'Утечка клиентской базы. Регулятор выписал предписание, клиенты жалуются.',
+    penaltyType: 'skip_turns',
+    skipTurns: 1,
+  },
+]
+
 // ── Экспорт ───────────────────────────────────────────────────────────────────
 
-export const TEACHER_CARDS: Card[] = [...teacherOpportunities, ...teacherBadEvents]
-export const DOCTOR_CARDS:  Card[] = [...doctorOpportunities,  ...doctorBadEvents]
-export const IT_CARDS:      Card[] = [...itOpportunities,      ...itBadEvents]
+export const TEACHER_CARDS:      Card[] = [...teacherOpportunities,      ...teacherBadEvents]
+export const DOCTOR_CARDS:       Card[] = [...doctorOpportunities,       ...doctorBadEvents]
+export const IT_CARDS:           Card[] = [...itOpportunities,           ...itBadEvents]
+export const ENTREPRENEUR_CARDS: Card[] = [...entrepreneurOpportunities, ...entrepreneurBadEvents]
 
 export function getCardsForRole(roleId: RoleId): Card[] {
   switch (roleId) {
-    case 'teacher': return TEACHER_CARDS
-    case 'doctor':  return DOCTOR_CARDS
-    case 'it':      return IT_CARDS
+    case 'teacher':      return TEACHER_CARDS
+    case 'doctor':       return DOCTOR_CARDS
+    case 'it':           return IT_CARDS
+    case 'entrepreneur': return ENTREPRENEUR_CARDS
   }
 }
 
-// Обратная совместимость (CARDS используется в drawCard-fallback)
-export const CARDS: Card[] = [...TEACHER_CARDS, ...DOCTOR_CARDS, ...IT_CARDS]
+// Обратная совместимость
+export const CARDS: Card[] = [...TEACHER_CARDS, ...DOCTOR_CARDS, ...IT_CARDS, ...ENTREPRENEUR_CARDS]

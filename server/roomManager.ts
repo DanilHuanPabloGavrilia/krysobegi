@@ -30,6 +30,7 @@ function makePlayer(socketId: string, nickname: string): Player {
     hasMortgage: false,
     financeSheet: { salary: 0, passiveIncome: 0, expenses: 0, cashFlow: 0, cash: 0 },
     assets: [],
+    loans: [],
     position: 0,
     lapsCompleted: 0,
     isBot: false,
@@ -66,6 +67,7 @@ export function createRoom(socketId: string, nickname: string): GameRoom {
     createdAt: Date.now(),
     marketPrices: {},
     lastRollNotifications: [],
+    pendingTradeOffer: null,
   }
   rooms.set(code, room)
   return room

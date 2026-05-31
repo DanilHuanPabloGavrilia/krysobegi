@@ -1,7 +1,7 @@
-import type { GameRoom, Player, Card, Asset, Season } from '../src/types/game'
+import type { GameRoom, Player, Card, Asset, Season, Loan, TradeOffer } from '../src/types/game'
 import { getCardsForRole, BABY_CARD, INVESTMENT_CARDS, BASE_STOCK_PRICES } from '../src/data/cards'
 import { ROLES } from '../src/data/roles'
-import { BOARD, KIDS_EXPENSE, WINTER_EXPENSE, SUMMER_KIDS_EXPENSE, LAPS_PER_SEASON } from '../src/data/constants'
+import { BOARD, KIDS_EXPENSE, WINTER_EXPENSE, SUMMER_KIDS_EXPENSE, LAPS_PER_SEASON, LOAN_TIERS } from '../src/data/constants'
 
 // ── волатильность акций ───────────────────────────────────────────────────────
 
@@ -28,11 +28,10 @@ function updateStockPrices(room: GameRoom): void {
     const range = STOCK_VOLATILITY_RANGE[card.volatility] ?? 0
     if (range === 0) continue
 
-    const change = (Math.random() * 2 - 1) * range  // от -range до +range
+    const change = (Math.random() * 2 - 1) * range
     room.marketPrices[stockId] = Math.max(1, Math.round(room.marketPrices[stockId] * (1 + change)))
   }
 
-  // Пересчитываем дивидендный доход для акций/крипты
   for (const player of room.players) {
     let changed = false
     for (const asset of player.assets) {
@@ -52,12 +51,10 @@ function updateStockPrices(room: GameRoom): void {
 
 /**
  * Проверяет провал бизнесов и обновляет статус активов.
- * Возвращает список уведомлений для lastRollNotifications.
  */
 function checkBusinessFailures(room: GameRoom, player: Player): string[] {
   const notifications: string[] = []
 
-  // 1. Декрементируем уже закрывающиеся активы
   for (const asset of [...player.assets]) {
     if (asset.status !== 'closing') continue
     asset.closingTurnsLeft = (asset.closingTurnsLeft ?? 1) - 1
@@ -73,17 +70,14 @@ function checkBusinessFailures(room: GameRoom, player: Player): string[] {
     }
   }
 
-  // 2. Сезонный эффект + бросок на провал у активных активов
   for (const asset of [...player.assets]) {
     if (!asset.failRisk || asset.status === 'closing') continue
 
-    // Обновляем доход с учётом сезона
     if (asset.seasonEffect && asset.baseMonthlyIncome !== undefined) {
       const modifier = asset.seasonEffect[room.season] ?? 0
       asset.monthlyIncome = Math.round(asset.baseMonthlyIncome * (1 + modifier))
     }
 
-    // Бросок на провал
     if (Math.random() * 100 < asset.failRisk) {
       if (asset.failPenalty && asset.failPenalty > 0) {
         player.financeSheet.cash = Math.max(0, player.financeSheet.cash - asset.failPenalty)
@@ -99,7 +93,6 @@ function checkBusinessFailures(room: GameRoom, player: Player): string[] {
           `🔴 «${asset.name}» у ${player.nickname} начинает закрываться (${asset.maxClosingTurns} мес.)`,
         )
       } else {
-        // Немедленное закрытие
         const refund = Math.round(asset.cost * (asset.sellBackPercent ?? 0) / 100)
         if (refund > 0) player.financeSheet.cash += refund
         player.assets = player.assets.filter((a) => a.id !== asset.id)
@@ -116,7 +109,28 @@ function checkBusinessFailures(room: GameRoom, player: Player): string[] {
   return notifications
 }
 
-/** Тянет карту для игрока с учётом роли и ~30% шанса инвестиционной карточки */
+/**
+ * Ежемесячная обработка кредитов: декрементируем turnsLeft, при 0 — снимаем с expenses.
+ */
+function processMonthlyLoans(room: GameRoom): void {
+  for (const player of room.players) {
+    if (!player.loans || player.loans.length === 0) continue
+
+    for (const loan of [...player.loans]) {
+      loan.turnsLeft--
+      if (loan.turnsLeft <= 0) {
+        player.financeSheet.expenses = Math.max(0, player.financeSheet.expenses - loan.monthlyPayment)
+        player.loans = player.loans.filter((l) => l.id !== loan.id)
+        calculateCashFlow(player)
+        room.lastRollNotifications.push(
+          `✅ ${player.nickname} выплатил кредит «${loan.name}» — платёж снят с расходов`,
+        )
+      }
+    }
+  }
+}
+
+/** Тянет карту для игрока с учётом роли */
 function drawCardForPlayer(player: Player, cellType: 'opportunity' | 'bad_event'): Card {
   const roleId = player.roleId
   if (!roleId) return BABY_CARD
@@ -125,7 +139,6 @@ function drawCardForPlayer(player: Player, cellType: 'opportunity' | 'bad_event'
     return BABY_CARD
   }
 
-  // На клетке «Возможность» ~30% шанс получить инвестиционную карточку
   if (cellType === 'opportunity' && Math.random() < 0.30) {
     return INVESTMENT_CARDS[Math.floor(Math.random() * INVESTMENT_CARDS.length)]
   }
@@ -166,23 +179,20 @@ function advanceSeason(room: GameRoom): void {
 }
 
 /**
- * Конец месяца (игрок пересёк / попал на клетку 0).
- * Обновляет цены акций, проверяет бизнесы, начисляет cashFlow всем.
- * Возвращает cashFlow текущего игрока (для UI).
+ * Конец месяца: обновить цены, проверить бизнесы, обработать кредиты, начислить cashFlow.
  */
 function applyMonthEnd(room: GameRoom, currentPlayer: Player): number {
   room.monthNumber++
 
-  // Обновляем цены акций до начисления дохода
   updateStockPrices(room)
 
-  // Проверяем провалы бизнесов для всех игроков
   for (const p of room.players) {
     const notes = checkBusinessFailures(room, p)
     room.lastRollNotifications.push(...notes)
   }
 
-  // Начисляем cashFlow всем игрокам
+  processMonthlyLoans(room)
+
   for (const p of room.players) {
     p.financeSheet.cash += p.financeSheet.cashFlow
   }
@@ -219,6 +229,7 @@ export function initializeGame(room: GameRoom): void {
     player.position = 0
     player.lapsCompleted = 0
     player.assets = []
+    player.loans = []
     player.turnsMissed = 0
     player.historyFlags = []
     player.isOnFastTrack = false
@@ -229,6 +240,7 @@ export function initializeGame(room: GameRoom): void {
   room.deck = []
   room.discardPile = []
   room.activeCard = null
+  room.pendingTradeOffer = null
   room.currentPlayerIndex = 0
   room.turnPhase = 'rolling'
   room.turnNumber = 1
@@ -255,7 +267,6 @@ export function rollDice(room: GameRoom, playerId: string): RollResult | string 
   if (room.currentPlayerIndex !== idx)  return 'Сейчас не ваш ход'
   if (room.turnPhase !== 'rolling')     return 'Кубик уже брошен'
 
-  // Сбрасываем уведомления прошлого хода
   room.lastRollNotifications = []
 
   const dice   = rand(1, 6)
@@ -267,7 +278,6 @@ export function rollDice(room: GameRoom, playerId: string): RollResult | string 
   let cashDelta = 0
   let monthEnd  = false
 
-  // Пересёк стартовую клетку (не попал точно)?
   const passedStart = player.position !== 0 && player.position < oldPos
   if (passedStart) {
     cashDelta += applyMonthEnd(room, player)
@@ -279,7 +289,6 @@ export function rollDice(room: GameRoom, playerId: string): RollResult | string 
   switch (cellType) {
 
     case 'start': {
-      // Точное попадание на Старт — конец месяца
       cashDelta += applyMonthEnd(room, player)
       monthEnd   = true
       advanceTurn(room)
@@ -287,7 +296,6 @@ export function rollDice(room: GameRoom, playerId: string): RollResult | string 
     }
 
     case 'bonus': {
-      // Случайная премия 3 000 – 15 000 ₽
       const bonus = rand(3_000, 15_000)
       player.financeSheet.cash += bonus
       cashDelta += bonus
@@ -327,6 +335,30 @@ export function rollDice(room: GameRoom, playerId: string): RollResult | string 
       const delta = Math.round((Math.random() > 0.5 ? 1 : -1) * pct * base)
       player.financeSheet.cash = Math.max(0, player.financeSheet.cash + delta)
       cashDelta += delta
+      advanceTurn(room)
+      return { dice, cellType, autoAdvance: true, cashDelta, ...(monthEnd && { monthEnd }) }
+    }
+
+    case 'raid': {
+      // Забираем 20% наличных у лидера по пассивному доходу (или по наличным, если ничьи)
+      const others = room.players.filter((p) => p.id !== player.id)
+      if (others.length === 0) {
+        const bonus = rand(5_000, 20_000)
+        player.financeSheet.cash += bonus
+        cashDelta += bonus
+      } else {
+        const richest = others.reduce((a, b) =>
+          a.financeSheet.passiveIncome >= b.financeSheet.passiveIncome ? a : b
+        )
+        const steal = Math.max(15_000, Math.floor(richest.financeSheet.cash * 0.20))
+        const actual = Math.min(steal, richest.financeSheet.cash)
+        richest.financeSheet.cash -= actual
+        player.financeSheet.cash += actual
+        cashDelta += actual
+        room.lastRollNotifications.push(
+          `🗡️ ${player.nickname} обчистил ${richest.nickname} на ${actual.toLocaleString('ru-RU')} ₽!`,
+        )
+      }
       advanceTurn(room)
       return { dice, cellType, autoAdvance: true, cashDelta, ...(monthEnd && { monthEnd }) }
     }
@@ -376,10 +408,8 @@ export function applyCard(
     }
     applyEffect(player, card, room)
   } else if (card.type === 'bad_event') {
-    // Штраф нельзя отклонить — применяется всегда
     applyEffect(player, card, room)
   }
-  // investment decline → просто пропускаем, без штрафа
 
   room.discardPile.push(card)
   room.activeCard = null
@@ -390,6 +420,167 @@ export function applyCard(
   }
 
   advanceTurn(room)
+  return room
+}
+
+// ── Продажа актива ────────────────────────────────────────────────────────────
+
+export function sellAsset(room: GameRoom, playerId: string, assetId: string): GameRoom | string {
+  const player = room.players.find((p) => p.id === playerId)
+  if (!player) return 'Игрок не найден'
+
+  const asset = player.assets.find((a) => a.id === assetId)
+  if (!asset) return 'Актив не найден'
+  if (!asset.canSell) return 'Этот актив нельзя продать'
+  if (asset.status === 'closing') return 'Актив закрывается — продажа невозможна'
+
+  const sellValue = (asset.type === 'stock' || asset.type === 'crypto')
+    ? Math.round(
+        (asset.shares ?? 0) *
+        (room.marketPrices[asset.stockId ?? ''] ?? asset.costPerShare ?? 0) *
+        (asset.sellBackPercent ?? 100) / 100,
+      )
+    : Math.round(asset.cost * (asset.sellBackPercent ?? 100) / 100)
+
+  player.financeSheet.cash += sellValue
+  player.financeSheet.expenses = Math.max(0, player.financeSheet.expenses - asset.monthlyExpense)
+  player.assets = player.assets.filter((a) => a.id !== assetId)
+  calculateCashFlow(player)
+
+  return room
+}
+
+// ── Кредиты ───────────────────────────────────────────────────────────────────
+
+export function takeLoan(
+  room: GameRoom,
+  playerId: string,
+  tier: 'small' | 'medium' | 'large',
+): GameRoom | string {
+  const player = room.players.find((p) => p.id === playerId)
+  if (!player) return 'Игрок не найден'
+
+  const config = LOAN_TIERS[tier]
+
+  // Предприниматель может держать до 3 кредитов, остальные — до 2
+  const maxLoans = player.roleId === 'entrepreneur' ? 3 : 2
+  if ((player.loans ?? []).length >= maxLoans) {
+    return `Нельзя взять более ${maxLoans} кредитов одновременно`
+  }
+
+  const loan: Loan = {
+    id: `loan_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    name: config.name,
+    amount: config.amount,
+    monthlyPayment: config.monthlyPayment,
+    turnsLeft: config.turns,
+  }
+
+  player.loans = player.loans ?? []
+  player.loans.push(loan)
+  player.financeSheet.cash += config.amount
+  player.financeSheet.expenses += config.monthlyPayment
+  calculateCashFlow(player)
+
+  return room
+}
+
+export function repayLoan(room: GameRoom, playerId: string, loanId: string): GameRoom | string {
+  const player = room.players.find((p) => p.id === playerId)
+  if (!player) return 'Игрок не найден'
+
+  const loan = (player.loans ?? []).find((l) => l.id === loanId)
+  if (!loan) return 'Кредит не найден'
+
+  // Досрочное погашение: 90% от оставшейся суммы (10% скидка)
+  const repayAmount = Math.round(loan.monthlyPayment * loan.turnsLeft * 0.9)
+  if (player.financeSheet.cash < repayAmount) {
+    return `Недостаточно средств (нужно ${repayAmount.toLocaleString('ru-RU')} ₽)`
+  }
+
+  player.financeSheet.cash -= repayAmount
+  player.financeSheet.expenses = Math.max(0, player.financeSheet.expenses - loan.monthlyPayment)
+  player.loans = (player.loans ?? []).filter((l) => l.id !== loanId)
+  calculateCashFlow(player)
+
+  return room
+}
+
+// ── Торговля активами ─────────────────────────────────────────────────────────
+
+export function proposeTradeOffer(
+  room: GameRoom,
+  fromPlayerId: string,
+  data: { assetId: string; targetPlayerId: string; price: number },
+): GameRoom | string {
+  if (room.pendingTradeOffer) return 'Уже есть активное предложение обмена'
+
+  const fromPlayer = room.players.find((p) => p.id === fromPlayerId)
+  if (!fromPlayer) return 'Игрок не найден'
+
+  const asset = fromPlayer.assets.find((a) => a.id === data.assetId)
+  if (!asset) return 'Актив не найден'
+  if (!asset.canSell) return 'Этот актив нельзя передавать'
+  if (asset.status === 'closing') return 'Актив закрывается — торговля невозможна'
+
+  const toPlayer = room.players.find((p) => p.id === data.targetPlayerId)
+  if (!toPlayer) return 'Целевой игрок не найден'
+  if (fromPlayerId === data.targetPlayerId) return 'Нельзя торговать сам с собой'
+
+  if (data.price < 0) return 'Цена не может быть отрицательной'
+
+  const offer: TradeOffer = {
+    id: `trade_${Date.now()}`,
+    fromPlayerId,
+    fromNickname: fromPlayer.nickname,
+    toPlayerId:   data.targetPlayerId,
+    assetId:      data.assetId,
+    assetName:    asset.name,
+    price:        data.price,
+    expiresAt:    Date.now() + 30_000,
+  }
+
+  room.pendingTradeOffer = offer
+  return room
+}
+
+export function respondToTrade(
+  room: GameRoom,
+  toPlayerId: string,
+  accept: boolean,
+): GameRoom | string {
+  const offer = room.pendingTradeOffer
+  room.pendingTradeOffer = null   // сбрасываем независимо от ответа
+
+  if (!offer) return room
+  if (!accept) return room
+  if (Date.now() > offer.expiresAt) return room   // истекло
+
+  const fromPlayer = room.players.find((p) => p.id === offer.fromPlayerId)
+  const toPlayer   = room.players.find((p) => p.id === toPlayerId)
+  if (!fromPlayer || !toPlayer) return room
+
+  const asset = fromPlayer.assets.find((a) => a.id === offer.assetId)
+  if (!asset) return room   // актив больше не существует
+
+  if (toPlayer.financeSheet.cash < offer.price) {
+    return 'Недостаточно средств у покупателя'
+  }
+
+  // Перевод денег
+  toPlayer.financeSheet.cash   -= offer.price
+  fromPlayer.financeSheet.cash += offer.price
+
+  // Передача актива
+  asset.ownedBy = toPlayerId
+  fromPlayer.assets = fromPlayer.assets.filter((a) => a.id !== asset.id)
+  fromPlayer.financeSheet.expenses = Math.max(0, fromPlayer.financeSheet.expenses - asset.monthlyExpense)
+  toPlayer.assets.push(asset)
+  toPlayer.financeSheet.expenses += asset.monthlyExpense
+
+  calculateCashFlow(fromPlayer)
+  calculateCashFlow(toPlayer)
+
   return room
 }
 
@@ -425,7 +616,6 @@ function applyEffect(player: Player, card: Card, room: GameRoom): void {
     player.financeSheet.cash -= card.downPayment ?? 0
 
     if (card.subtype === 'stock' || card.subtype === 'crypto') {
-      // Текущая рыночная цена (могла измениться с момента выдачи карточки)
       const currentPrice = card.stockId
         ? (room.marketPrices[card.stockId] ?? card.costPerShare ?? 0)
         : (card.costPerShare ?? 0)

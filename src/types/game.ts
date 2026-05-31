@@ -1,15 +1,16 @@
-export type RoleId = 'doctor' | 'it' | 'teacher'
+export type RoleId = 'doctor' | 'it' | 'teacher' | 'entrepreneur'
 
 export type CardType =
   | 'opportunity'
   | 'bad_event'
-  | 'bonus'        // бывший payday: случайная премия 3–15 тыс. ₽
-  | 'investment'   // инвестиционная карточка (рисуется с зелёных клеток)
+  | 'bonus'
+  | 'investment'
   | 'market'
   | 'vacation'
   | 'tax'
   | 'luck'
   | 'start'
+  | 'raid'          // 🗡️ разбойничья клетка — забрать деньги у лидера
 
 export type GamePhase = 'lobby' | 'setup' | 'playing' | 'finished'
 
@@ -43,32 +44,55 @@ export interface FinanceSheet {
   cash: number
 }
 
+// ── Кредит ────────────────────────────────────────────────────────────────────
+
+export interface Loan {
+  id: string
+  name: string
+  amount: number          // сумма, полученная на руки
+  monthlyPayment: number  // ежемесячный платёж (уже в expenses)
+  turnsLeft: number       // месяцев до погашения
+}
+
+// ── Предложение обмена активом ────────────────────────────────────────────────
+
+export interface TradeOffer {
+  id: string
+  fromPlayerId: string
+  fromNickname: string
+  toPlayerId: string
+  assetId: string
+  assetName: string
+  price: number        // цена, которую заплатит покупатель
+  expiresAt: number    // timestamp истечения
+}
+
+// ── Актив ─────────────────────────────────────────────────────────────────────
+
 export interface Asset {
   id: string
   name: string
   type: 'real_estate' | 'business' | 'stock' | 'deposit' | 'crypto'
-  cost: number           // общая сумма вложений
-  monthlyIncome: number  // текущий ежемесячный доход
+  cost: number
+  monthlyIncome: number
   monthlyExpense: number
   ownedBy: string
 
-  // ── Акции / крипта / вклад ──────────────────────────────────────────────
-  stockId?: string           // ключ в GameRoom.marketPrices
-  shares?: number            // количество акций
-  costPerShare?: number      // цена покупки за одну акцию
-  dividendPercent?: number   // % годовых дивиденда
+  stockId?: string
+  shares?: number
+  costPerShare?: number
+  dividendPercent?: number
   volatility?: 'none' | 'low' | 'medium' | 'high' | 'extreme'
   canSell?: boolean
-  sellBackPercent?: number   // % от cost при продаже / закрытии
+  sellBackPercent?: number
 
-  // ── Малый бизнес ────────────────────────────────────────────────────────
-  failRisk?: number          // % шанс провала каждый месяц (0–100)
-  failPenalty?: number       // разовый штраф наличными при провале
+  failRisk?: number
+  failPenalty?: number
   status?: 'active' | 'closing'
-  closingTurnsLeft?: number  // месяцев до полного закрытия (убывает каждый лап)
-  maxClosingTurns?: number   // исходное значение closingTurns из карточки
-  seasonEffect?: Record<string, number>  // { winter: -0.4 } = −40% дохода зимой
-  baseMonthlyIncome?: number // доход без сезонного модификатора
+  closingTurnsLeft?: number
+  maxClosingTurns?: number
+  seasonEffect?: Record<string, number>
+  baseMonthlyIncome?: number
 }
 
 export interface Perk {
@@ -106,6 +130,7 @@ export interface Player {
   hasMortgage: boolean
   financeSheet: FinanceSheet
   assets: Asset[]
+  loans: Loan[]                // кредиты
   position: number
   lapsCompleted: number
   isBot: boolean
@@ -123,7 +148,6 @@ export interface Card {
   description: string
   roleId?: RoleId | 'any'
 
-  // ── Возможность — стандартная ────────────────────────────────────────────
   cost?: number
   downPayment?: number
   monthlyIncome?: number
@@ -132,7 +156,6 @@ export interface Card {
   cashBonus?: number
   salaryDelta?: number
 
-  // ── Неприятность ─────────────────────────────────────────────────────────
   penaltyAmount?: number
   penaltyType?: 'cash' | 'percent_income' | 'skip_turns' | 'baby'
   skipTurns?: number
@@ -140,18 +163,17 @@ export interface Card {
   triggerIfFlag?: string
   penaltyMultiplierIfFlag?: number
 
-  // ── Инвестиция ───────────────────────────────────────────────────────────
   subtype?: 'stock' | 'crypto' | 'deposit' | 'business'
-  stockId?: string        // ключ в marketPrices
-  costPerShare?: number   // цена за акцию
-  minShares?: number      // минимальный пакет покупки
+  stockId?: string
+  costPerShare?: number
+  minShares?: number
   dividendPercent?: number
   volatility?: 'none' | 'low' | 'medium' | 'high' | 'extreme'
   canSell?: boolean
   sellBackPercent?: number
   failRisk?: number
   failPenalty?: number
-  closingTurns?: number   // месяцев на закрытие после провала
+  closingTurns?: number
   seasonEffect?: Record<string, number>
 }
 
@@ -172,8 +194,9 @@ export interface GameRoom {
   macroEventQueue: string[]
   turnTimeoutSeconds: number
   createdAt: number
-  marketPrices: Record<string, number>    // stockId → текущая цена за акцию
-  lastRollNotifications: string[]          // уведомления последнего хода (видят все)
+  marketPrices: Record<string, number>
+  lastRollNotifications: string[]
+  pendingTradeOffer: TradeOffer | null   // активное предложение обмена
 }
 
 export interface GameState {
