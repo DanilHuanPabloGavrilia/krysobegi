@@ -82,18 +82,26 @@ io.on('connection', (socket) => {
   // ── настройка персонажа ───────────────────────────────────────────────────
 
   socket.on('submitSetup', (setup) => {
-    const found = rm.findPlayerRoom(socket.id)
-    if (!found) return
-    const result = rm.submitSetup(found.code, socket.id, setup)
-    if (isError(result)) { socket.emit('error', result); return }
+    try {
+      const found = rm.findPlayerRoom(socket.id)
+      if (!found) return
+      const result = rm.submitSetup(found.code, socket.id, setup)
+      if (isError(result)) { socket.emit('error', result); return }
 
-    io.to(found.code).emit('roomUpdated', found.room)
-
-    // Все игроки сдали настройки → инициализируем и запускаем игру
-    if (found.room.players.every((p) => p.isReady)) {
-      ge.initializeGame(found.room)
+      console.log(`[${found.code}] submitSetup от ${socket.id}, готовы: ${found.room.players.filter(p=>p.isReady).length}/${found.room.players.length}`)
       io.to(found.code).emit('roomUpdated', found.room)
-      console.log(`[${found.code}] все настройки сданы, игра началась!`)
+
+      // Все игроки сдали настройки → инициализируем и запускаем игру
+      if (found.room.players.every((p) => p.isReady)) {
+        console.log(`[${found.code}] все готовы — запускаем initializeGame`)
+        ge.initializeGame(found.room)
+        console.log(`[${found.code}] initializeGame ОК, phase=${found.room.phase}`)
+        io.to(found.code).emit('roomUpdated', found.room)
+        console.log(`[${found.code}] игра началась!`)
+      }
+    } catch (err) {
+      console.error('submitSetup crash:', err)
+      socket.emit('error', 'Ошибка при запуске игры: ' + String(err))
     }
   })
 
